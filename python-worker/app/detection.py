@@ -81,3 +81,26 @@ def detect_repeated_auth_failures(events: list[dict]) -> list[dict]:
                 break
 
     return findings
+
+def test_detects_failures_arriving_out_of_order():
+    start = datetime(
+        2026, 10, 24, 10, 0, 0,
+        tzinfo=timezone.utc,
+    )
+
+    arrival_seconds = [40, 5, 30, 15, 20]
+
+    events = [
+        make_event(
+            i,
+            "auth_failure",
+            start + timedelta(seconds=second),
+        )
+        for i, second in enumerate(arrival_seconds)
+    ]
+
+    findings = detect_repeated_auth_failures(events)
+
+    assert len(findings) == 1
+    assert findings[0]["rule_id"] == "AUTH-001"
+    assert findings[0]["event_count"] == 5

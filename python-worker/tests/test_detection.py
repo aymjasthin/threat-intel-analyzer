@@ -52,3 +52,25 @@ def test_ignores_other_event_types():
     findings = detect_repeated_auth_failures(events)
 
     assert findings == []
+
+def test_does_not_flag_failures_spread_over_more_than_60_seconds():
+    start = datetime(
+        2026, 10, 24, 10, 0, 0,
+        tzinfo=timezone.utc,
+    )
+
+    # Five failures, but the first and last are 80 seconds apart.
+    failure_seconds = [0, 20, 40, 60, 80]
+
+    events = [
+        make_event(
+            i,
+            "auth_failure",
+            start + timedelta(seconds=second),
+        )
+        for i, second in enumerate(failure_seconds)
+    ]
+
+    findings = detect_repeated_auth_failures(events)
+
+    assert findings == []
