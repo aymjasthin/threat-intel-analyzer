@@ -32,6 +32,21 @@ by itself, prove that an attack occurred.
 5. React communicates with the Go API to display results.
 6. Threat intelligence enriches findings with additional context.
 
+## Data Contracts
+
+The `contracts/` directory contains the shared JSON Schemas
+used to define communication formats across the application.
+
+- `event.schema.json` defines normalized security events.
+- `finding.schema.json` defines normalized analysis findings.
+
+Events describe observed activity. Findings describe potentially
+suspicious behavior identified through detection rules,
+anomaly analysis, or threat-intelligence matching.
+
+Components must validate incoming data and handle invalid events
+or findings explicitly.
+
 ## Development Roadmap
 
 - [ ] Phase 0: Project foundation and event contracts

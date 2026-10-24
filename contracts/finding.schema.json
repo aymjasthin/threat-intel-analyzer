@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Threat Intel Analyzer Finding",
+  "description": "A normalized finding produced by security analysis.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "finding_id",
+    "title",
+    "severity",
+    "detection_type",
+    "rule_id",
+    "description",
+    "source_ip",
+    "first_seen",
+    "last_seen",
+    "event_count",
+    "evidence"
+  ],
+  "properties": {
+    "finding_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "detection_type": {
+      "type": "string",
+      "enum": [
+        "rule_based",
+        "anomaly_based",
+        "threat_intel"
+      ]
+    },
+    "rule_id": {
+      "type": ["string", "null"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_ip": {
+      "type": ["string", "null"],
+      "format": "ipv4"
+    },
+    "first_seen": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_seen": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "evidence": {
+      "type": "object"
+    }
+  }
+}
