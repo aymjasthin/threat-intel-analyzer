@@ -74,3 +74,76 @@ def test_does_not_flag_failures_spread_over_more_than_60_seconds():
     findings = detect_repeated_auth_failures(events)
 
     assert findings == []
+
+def test_detects_failures_arriving_out_of_order():
+    start = datetime(
+        2026, 10, 24, 10, 0, 0,
+        tzinfo=timezone.utc,
+    )
+
+    arrival_seconds = [40, 5, 30, 15, 20]
+
+    events = [
+        make_event(
+            i,
+            "auth_failure",
+            start + timedelta(seconds=second),
+        )
+        for i, second in enumerate(arrival_seconds)
+    ]
+
+    findings = detect_repeated_auth_failures(events)
+
+    assert len(findings) == 1
+    assert findings[0]["rule_id"] == "AUTH-001"
+    assert findings[0]["event_count"] == 5
+
+def test_detects_five_failures_within_exactly_60_seconds():
+    start = datetime(
+        2026, 10, 24, 10, 0, 0,
+        tzinfo=timezone.utc,
+    )
+
+    # The first and last failures are exactly 60 seconds apart.
+    failure_seconds = [0, 15, 30, 45, 60]
+
+    events = [
+        make_event(
+            i,
+            "auth_failure",
+            start + timedelta(seconds=second),
+        )
+        for i, second in enumerate(failure_seconds)
+    ]
+
+    findings = detect_repeated_auth_failures(events)
+
+    assert len(findings) == 1
+    assert findings[0]["rule_id"] == "AUTH-001"
+    assert findings[0]["event_count"] == 5
+
+def test_reanalyzing_same_events_generates_new_finding_id():
+    start = datetime(
+        2026, 10, 24, 10, 0, 0,
+        tzinfo=timezone.utc,
+    )
+
+    events = [
+        make_event(
+            i,
+            "auth_failure",
+            start + timedelta(seconds=i * 5),
+        )
+        for i in range(5)
+    ]
+
+    first_findings = detect_repeated_auth_failures(events)
+    second_findings = detect_repeated_auth_failures(events)
+
+    assert len(first_findings) == 1
+    assert len(second_findings) == 1
+
+    assert (
+        first_findings[0]["finding_id"]
+        != second_findings[0]["finding_id"]
+    )
