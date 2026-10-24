@@ -4,7 +4,12 @@ from typing import Literal
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict, Field, IPvAnyAddress
 
-from app.detection import detect_repeated_auth_failures
+from app.detection import (
+    detect_repeated_auth_failures,
+    detect_high_request_rate,
+    detect_large_payload_anomalies,
+    detect_port_scanning,
+)
 
 
 app = FastAPI(
@@ -58,12 +63,19 @@ def validate_event(event: SecurityEvent):
 
 @app.post("/analyze")
 def analyze_events(request: AnalyzeRequest):
-    events = [
-        event.model_dump(mode="json")
-        for event in request.events
-    ]
+    events = [event.model_dump(mode="json") for event in request.events]
 
-    findings = detect_repeated_auth_failures(events)
+    auth_findings = detect_repeated_auth_failures(events)
+    request_findings = detect_high_request_rate(events)
+    payload_findings = detect_large_payload_anomalies(events)
+    port_scan_findings = detect_port_scanning(events)
+
+    findings = (
+        auth_findings
+        + request_findings
+        + payload_findings
+        + port_scan_findings
+    )
 
     return {
         "events_received": len(events),
