@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Threat Intel Analyzer Event",
+  "description": "A normalized security or network event.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "timestamp",
+    "source_ip",
+    "destination_ip",
+    "protocol",
+    "event_type",
+    "payload_size"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_ip": {
+      "type": ["string", "null"],
+      "format": "ipv4"
+    },
+    "destination_ip": {
+      "type": ["string", "null"],
+      "format": "ipv4"
+    },
+    "protocol": {
+      "type": ["string", "null"],
+      "enum": ["TCP", "UDP", "ICMP", null]
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "connection",
+        "request",
+        "auth_success",
+        "auth_failure",
+        "dns_query"
+      ]
+    },
+    "payload_size": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    }
+  }
+}
