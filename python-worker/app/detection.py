@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 
 AUTH_FAILURE_THRESHOLD = 5
@@ -33,14 +34,12 @@ def detect_repeated_auth_failures(events: list[dict]) -> list[dict]:
             continue
 
         timestamp = timestamp.astimezone(timezone.utc)
-
         failures_by_ip[str(source_ip)].append(timestamp)
 
     findings = []
 
     for source_ip, timestamps in failures_by_ip.items():
         timestamps.sort()
-
         left = 0
 
         for right, current_time in enumerate(timestamps):
@@ -56,20 +55,25 @@ def detect_repeated_auth_failures(events: list[dict]) -> list[dict]:
                 window_timestamps = timestamps[left:right + 1]
 
                 findings.append({
-                    "rule_id": "AUTH-001",
+                    "finding_id": str(uuid4()),
                     "title": "Repeated Authentication Failures",
                     "severity": "medium",
                     "detection_type": "rule_based",
-                    "source_ip": source_ip,
-                    "event_count": failure_count,
-                    "window_seconds": AUTH_FAILURE_WINDOW_SECONDS,
-                    "first_seen": window_timestamps[0].isoformat(),
-                    "last_seen": window_timestamps[-1].isoformat(),
+                    "rule_id": "AUTH-001",
                     "description": (
-                        f"{failure_count} authentication failures "
-                        f"from {source_ip} occurred within "
+                        f"{failure_count} authentication failures from "
+                        f"{source_ip} occurred within "
                         f"{AUTH_FAILURE_WINDOW_SECONDS} seconds."
                     ),
+                    "source_ip": source_ip,
+                    "first_seen": window_timestamps[0].isoformat(),
+                    "last_seen": window_timestamps[-1].isoformat(),
+                    "event_count": failure_count,
+                    "evidence": {
+                        "source_ip": source_ip,
+                        "failure_count": failure_count,
+                        "window_seconds": AUTH_FAILURE_WINDOW_SECONDS,
+                    },
                 })
 
                 # Report only the first threshold-crossing window
