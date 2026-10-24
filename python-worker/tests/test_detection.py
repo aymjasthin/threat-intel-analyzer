@@ -26,6 +26,13 @@ def test_detects_five_authentication_failures():
     assert findings[0]["rule_id"] == "AUTH-001"
     assert findings[0]["source_ip"] == "192.168.1.50"
     assert findings[0]["event_count"] == 5
+    assert findings[0]["evidence"]["event_ids"] == [
+        "evt-0",
+        "evt-1",
+        "evt-2",
+        "evt-3",
+        "evt-4",
+    ]
 
 
 def test_does_not_flag_four_authentication_failures():

@@ -21,8 +21,9 @@ def detect_repeated_auth_failures(events: list[dict]) -> list[dict]:
 
         source_ip = event.get("source_ip")
         timestamp = event.get("timestamp")
+        event_id = event.get("event_id")
 
-        if not source_ip or not timestamp:
+        if not source_ip or not timestamp or not event_id:
             continue
 
         if isinstance(timestamp, str):
@@ -34,17 +35,23 @@ def detect_repeated_auth_failures(events: list[dict]) -> list[dict]:
             continue
 
         timestamp = timestamp.astimezone(timezone.utc)
-        failures_by_ip[str(source_ip)].append(timestamp)
+
+        failures_by_ip[str(source_ip)].append({
+            "event_id": event_id,
+            "timestamp": timestamp,
+        })
 
     findings = []
 
-    for source_ip, timestamps in failures_by_ip.items():
-        timestamps.sort()
+    for source_ip, failures in failures_by_ip.items():
+        failures.sort(key=lambda failure: failure["timestamp"])
         left = 0
 
-        for right, current_time in enumerate(timestamps):
+        for right, current_failure in enumerate(failures):
+            current_time = current_failure["timestamp"]
+
             while (
-                current_time - timestamps[left]
+                current_time - failures[left]["timestamp"]
                 > timedelta(seconds=AUTH_FAILURE_WINDOW_SECONDS)
             ):
                 left += 1
@@ -52,7 +59,16 @@ def detect_repeated_auth_failures(events: list[dict]) -> list[dict]:
             failure_count = right - left + 1
 
             if failure_count >= AUTH_FAILURE_THRESHOLD:
-                window_timestamps = timestamps[left:right + 1]
+                window_failures = failures[left:right + 1]
+                window_timestamps = [
+                    failure["timestamp"]
+                    for failure in window_failures
+                ]
+
+                event_ids = [
+                    failure["event_id"]
+                    for failure in window_failures
+                ]
 
                 findings.append({
                     "finding_id": str(uuid4()),
@@ -73,34 +89,11 @@ def detect_repeated_auth_failures(events: list[dict]) -> list[dict]:
                         "source_ip": source_ip,
                         "failure_count": failure_count,
                         "window_seconds": AUTH_FAILURE_WINDOW_SECONDS,
+                        "event_ids": event_ids,
                     },
                 })
 
-                # Report only the first threshold-crossing window
-                # for this IP in this batch.
+                # Report only the first qualifying window for this IP.
                 break
 
     return findings
-
-def test_detects_failures_arriving_out_of_order():
-    start = datetime(
-        2026, 10, 24, 10, 0, 0,
-        tzinfo=timezone.utc,
-    )
-
-    arrival_seconds = [40, 5, 30, 15, 20]
-
-    events = [
-        make_event(
-            i,
-            "auth_failure",
-            start + timedelta(seconds=second),
-        )
-        for i, second in enumerate(arrival_seconds)
-    ]
-
-    findings = detect_repeated_auth_failures(events)
-
-    assert len(findings) == 1
-    assert findings[0]["rule_id"] == "AUTH-001"
-    assert findings[0]["event_count"] == 5
