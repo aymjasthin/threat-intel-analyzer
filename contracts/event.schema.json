@@ -11,7 +11,8 @@
     "destination_ip",
     "protocol",
     "event_type",
-    "payload_size"
+    "payload_size",
+    "destination_port"
   ],
   "properties": {
     "event_id": {
@@ -47,6 +48,11 @@
     "payload_size": {
       "type": ["integer", "null"],
       "minimum": 0
+    },
+    "destination_port": {
+        "type": ["integer", "null"],
+        "minimum": 1,
+        "maximum": 65535
     }
   }
 }
