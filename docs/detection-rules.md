@@ -105,3 +105,52 @@ A match does not independently prove malicious activity.
 - Findings must include enough evidence to explain the detection.
 - Repeated processing must not create uncontrolled duplicate findings.
 - Detection behavior must be covered by automated tests.
+
+## TI-001 — Threat Intelligence IP Matching
+
+**Detection Type:** `threat_intel`  
+**Severity:** Medium  
+**Status:** Implemented
+
+### Description
+
+Detects security events whose source IP address matches
+an entry in the configured threat intelligence dataset.
+
+### Detection Logic
+
+1. Receive a batch of security events.
+2. Extract the source IP address from each event.
+3. Compare the source IP against the threat intelligence IP set.
+4. Generate a TI-001 finding for each matching event.
+5. Ignore events with missing required information.
+
+### Data Source
+
+Currently uses a local Python set defined in:
+
+`python-worker/app/threat_intel.py`
+
+The dataset contains reserved documentation IP addresses
+for testing purposes only.
+
+Future versions may use external threat intelligence feeds
+or a database.
+
+### Limitations
+
+- Matches source IP addresses only.
+- Uses exact string matching.
+- Does not evaluate indicator reputation or confidence.
+- Does not automatically block suspicious traffic.
+- Produces one finding per matching event.
+- A match is an indicator of potential risk, not proof of an attack.
+
+### Tests
+
+- Detects a matching source IP.
+- Ignores IPs absent from the intelligence dataset.
+- Handles missing source IP addresses.
+- Detects multiple matching events.
+- Integrates with the FastAPI `/analyze` endpoint.
+- Validates findings against `finding.schema.json`.

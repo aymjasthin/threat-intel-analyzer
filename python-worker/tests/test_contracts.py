@@ -9,6 +9,7 @@ from app.detection import detect_repeated_auth_failures
 from app.detection import detect_high_request_rate
 from app.detection import detect_large_payload_anomalies
 from app.detection import detect_port_scanning
+from app.detection import detect_threat_intelligence_matches
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = PROJECT_ROOT / "contracts" / "finding.schema.json"
@@ -179,5 +180,39 @@ def test_port_scanning_finding_matches_schema():
 
     assert errors == [], (
         "NET-003 finding violates the shared JSON Schema:\n"
+        + "\n".join(error.message for error in errors)
+    )
+
+def test_threat_intelligence_finding_matches_schema():
+    events = [
+        {
+            "event_id": "evt-ti-001",
+            "timestamp": "2026-10-24T10:00:00+00:00",
+            "source_ip": "203.0.113.50",
+            "event_type": "connection",
+        }
+    ]
+
+    threat_intel_ips = {"203.0.113.50"}
+
+    findings = detect_threat_intelligence_matches(
+        events,
+        threat_intel_ips,
+    )
+
+    assert len(findings) == 1
+
+    with SCHEMA_PATH.open(encoding="utf-8") as schema_file:
+        schema = json.load(schema_file)
+
+    validator = Draft202012Validator(
+        schema,
+        format_checker=FormatChecker(),
+    )
+
+    errors = list(validator.iter_errors(findings[0]))
+
+    assert errors == [], (
+        "TI-001 finding violates the shared JSON Schema:\n"
         + "\n".join(error.message for error in errors)
     )

@@ -389,3 +389,50 @@ def detect_port_scanning(events: list[dict]) -> list[dict]:
                 break
 
     return findings
+
+def detect_threat_intelligence_matches(
+    events: list[dict],
+    threat_intel_ips: set[str],
+) -> list[dict]:
+    """
+    Detect events whose source IP appears
+    in the provided threat intelligence list.
+    """
+
+    findings = []
+
+    for event in events:
+        source_ip = event.get("source_ip")
+        event_id = event.get("event_id")
+        timestamp = event.get("timestamp")
+
+        # Skip events missing essential information.
+        if not source_ip or not event_id or not timestamp:
+            continue
+
+        # Check whether the source IP is in our intelligence list.
+        if str(source_ip) not in threat_intel_ips:
+            continue
+
+        findings.append({
+            "finding_id": str(uuid4()),
+            "title": "Threat Intelligence IP Match",
+            "severity": "medium",
+            "detection_type": "threat_intel",
+            "rule_id": "TI-001",
+            "description": (
+                f"Source IP {source_ip} matches an entry "
+                "in the threat intelligence dataset."
+            ),
+            "source_ip": str(source_ip),
+            "first_seen": timestamp,
+            "last_seen": timestamp,
+            "event_count": 1,
+            "evidence": {
+                "source_ip": str(source_ip),
+                "matched_ip": str(source_ip),
+                "event_ids": [event_id],
+            },
+        })
+
+    return findings

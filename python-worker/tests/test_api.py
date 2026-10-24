@@ -236,3 +236,42 @@ def test_analyze_detects_port_scanning():
     assert finding["evidence"]["distinct_port_count"] == 20
     assert len(finding["evidence"]["destination_ports"]) == 20
     assert len(finding["evidence"]["event_ids"]) == 20
+
+def test_analyze_detects_threat_intelligence_match():
+    response = client.post(
+        "/analyze",
+        json={
+            "events": [
+                {
+                    "event_id": "evt-ti-001",
+                    "timestamp": "2026-10-24T10:00:00+00:00",
+                    "source_ip": "203.0.113.50",
+                    "destination_ip": "192.0.2.10",
+                    "protocol": "TCP",
+                    "event_type": "connection",
+                    "payload_size": 100,
+                    "destination_port": 443,
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["events_received"] == 1
+
+    ti_findings = [
+        finding
+        for finding in data["findings"]
+        if finding["rule_id"] == "TI-001"
+    ]
+
+    assert len(ti_findings) == 1
+
+    finding = ti_findings[0]
+
+    assert finding["source_ip"] == "203.0.113.50"
+    assert finding["detection_type"] == "threat_intel"
+    assert finding["evidence"]["event_ids"] == ["evt-ti-001"]

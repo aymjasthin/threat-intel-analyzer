@@ -4,6 +4,7 @@ from app.detection import detect_repeated_auth_failures
 from app.detection import detect_high_request_rate
 from app.detection import detect_large_payload_anomalies
 from app.detection import detect_port_scanning
+from app.detection import detect_threat_intelligence_matches
 
 
 def make_event(event_id: int, event_type: str, timestamp: datetime) -> dict:
@@ -537,3 +538,130 @@ def test_port_scanning_handles_multiple_source_ips():
     for finding in findings:
         assert finding["rule_id"] == "NET-003"
         assert finding["evidence"]["distinct_port_count"] == 20
+
+def test_detects_threat_intelligence_ip_match():
+    events = [
+        {
+            "event_id": "evt-001",
+            "event_type": "connection",
+            "source_ip": "203.0.113.50",
+            "timestamp": "2026-10-24T10:00:00+00:00",
+        }
+    ]
+
+    threat_intel_ips = {"203.0.113.50"}
+
+    findings = detect_threat_intelligence_matches(
+        events,
+        threat_intel_ips,
+    )
+
+    assert len(findings) == 1
+
+    finding = findings[0]
+
+    assert finding["rule_id"] == "TI-001"
+    assert finding["detection_type"] == "threat_intel"
+    assert finding["source_ip"] == "203.0.113.50"
+    assert finding["evidence"]["event_ids"] == ["evt-001"]
+
+def test_threat_intelligence_ignores_unknown_ips():
+    events = [
+        {
+            "event_id": "evt-001",
+            "event_type": "connection",
+            "source_ip": "192.0.2.10",
+            "timestamp": "2026-10-24T10:00:00+00:00",
+        }
+    ]
+
+    threat_intel_ips = {
+        "203.0.113.50",
+        "198.51.100.25",
+    }
+
+    findings = detect_threat_intelligence_matches(
+        events,
+        threat_intel_ips,
+    )
+
+    assert findings == []
+
+def test_threat_intelligence_ignores_missing_source_ips():
+    events = [
+        {
+            "event_id": "evt-001",
+            "event_type": "connection",
+            "timestamp": "2026-10-24T10:00:00+00:00",
+        },
+        {
+            "event_id": "evt-002",
+            "event_type": "connection",
+            "source_ip": None,
+            "timestamp": "2026-10-24T10:00:01+00:00",
+        },
+        {
+            "event_id": "evt-003",
+            "event_type": "connection",
+            "source_ip": "203.0.113.50",
+            "timestamp": "2026-10-24T10:00:02+00:00",
+        },
+    ]
+
+    threat_intel_ips = {"203.0.113.50"}
+
+    findings = detect_threat_intelligence_matches(
+        events,
+        threat_intel_ips,
+    )
+
+    assert len(findings) == 1
+    assert findings[0]["evidence"]["event_ids"] == ["evt-003"]
+
+def test_threat_intelligence_detects_multiple_matches():
+    events = [
+        {
+            "event_id": "evt-001",
+            "event_type": "connection",
+            "source_ip": "203.0.113.50",
+            "timestamp": "2026-10-24T10:00:00+00:00",
+        },
+        {
+            "event_id": "evt-002",
+            "event_type": "request",
+            "source_ip": "192.0.2.10",
+            "timestamp": "2026-10-24T10:00:01+00:00",
+        },
+        {
+            "event_id": "evt-003",
+            "event_type": "connection",
+            "source_ip": "198.51.100.25",
+            "timestamp": "2026-10-24T10:00:02+00:00",
+        },
+    ]
+
+    threat_intel_ips = {
+        "203.0.113.50",
+        "198.51.100.25",
+    }
+
+    findings = detect_threat_intelligence_matches(
+        events,
+        threat_intel_ips,
+    )
+
+    assert len(findings) == 2
+
+    matched_ips = {
+        finding["source_ip"]
+        for finding in findings
+    }
+
+    assert matched_ips == {
+        "203.0.113.50",
+        "198.51.100.25",
+    }
+
+    for finding in findings:
+        assert finding["rule_id"] == "TI-001"
+        assert finding["detection_type"] == "threat_intel"

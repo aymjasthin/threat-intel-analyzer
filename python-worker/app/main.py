@@ -9,7 +9,10 @@ from app.detection import (
     detect_high_request_rate,
     detect_large_payload_anomalies,
     detect_port_scanning,
+    detect_threat_intelligence_matches,
 )
+
+from app.threat_intel import THREAT_INTEL_IPS
 
 
 app = FastAPI(
@@ -69,12 +72,17 @@ def analyze_events(request: AnalyzeRequest):
     request_findings = detect_high_request_rate(events)
     payload_findings = detect_large_payload_anomalies(events)
     port_scan_findings = detect_port_scanning(events)
+    threat_intel_findings = detect_threat_intelligence_matches(
+        events,
+        THREAT_INTEL_IPS,
+    )
 
     findings = (
         auth_findings
         + request_findings
         + payload_findings
         + port_scan_findings
+        + threat_intel_findings
     )
 
     return {
