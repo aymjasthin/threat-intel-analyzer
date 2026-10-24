@@ -104,6 +104,13 @@ def test_detects_failures_arriving_out_of_order():
     assert len(findings) == 1
     assert findings[0]["rule_id"] == "AUTH-001"
     assert findings[0]["event_count"] == 5
+    assert findings[0]["evidence"]["event_ids"] == [
+        "evt-1",
+        "evt-3",
+        "evt-4",
+        "evt-2",
+        "evt-0",
+    ]
 
 def test_detects_five_failures_within_exactly_60_seconds():
     start = datetime(

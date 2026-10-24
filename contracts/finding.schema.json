@@ -67,7 +67,30 @@
       "minimum": 1
     },
     "evidence": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "source_ip": {
+          "type": "string",
+          "format": "ipv4"
+        },
+        "failure_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "window_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "event_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
     }
   }
 }

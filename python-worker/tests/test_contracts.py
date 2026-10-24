@@ -39,3 +39,38 @@ def test_auth_failure_finding_matches_shared_schema():
         "Finding violates the shared JSON Schema:\n"
         + "\n".join(error.message for error in errors)
     )
+
+def test_finding_schema_rejects_empty_event_ids():
+    with SCHEMA_PATH.open(encoding="utf-8") as schema_file:
+        schema = json.load(schema_file)
+
+    validator = Draft202012Validator(
+        schema,
+        format_checker=FormatChecker(),
+    )
+
+    invalid_finding = {
+        "finding_id": "finding-test",
+        "title": "Repeated Authentication Failures",
+        "severity": "medium",
+        "detection_type": "rule_based",
+        "rule_id": "AUTH-001",
+        "description": "Five authentication failures detected.",
+        "source_ip": "192.168.1.50",
+        "first_seen": "2026-10-24T10:00:00+00:00",
+        "last_seen": "2026-10-24T10:00:20+00:00",
+        "event_count": 5,
+        "evidence": {
+            "source_ip": "192.168.1.50",
+            "failure_count": 5,
+            "window_seconds": 60,
+            "event_ids": [],
+        },
+    }
+
+    errors = list(validator.iter_errors(invalid_finding))
+
+    assert any(
+        error.validator == "minItems"
+        for error in errors
+    ), "The schema should reject an empty event_ids array."
